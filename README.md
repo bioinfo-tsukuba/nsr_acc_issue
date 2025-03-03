@@ -24,7 +24,7 @@ The analysis consists of the following five steps, each linked to a specific cod
 
 # How to run the tutorial on your own
 ## Preparation of scRNA-seq Data
-### Overview of the Dataset
+### Overview of the dataset
 The dataset consists of scRNA-seq data from the cerebral cortex at multiple developmental stages in wild-type and Fezf2 mutant mice, obtained from [Di Bella et al. 2021](https://www.nature.com/articles/s41586-021-03670-5).
 
 ### Data Sources
