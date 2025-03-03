@@ -56,6 +56,7 @@ Then, put it into  `nsr_acc_issue-main/analysis/data_info`
 
 ## Managing analysis environment using Docker
 For this tutorial, we used an [Rstudio server Docker image](https://hub.docker.com/r/hway/rstudio_scrnaseq) that includes necessary libraries for scRNA-seq analysis.
+Please refer to [here](https://github.com/bioinfo-tsukuba/rstudio_scrnaseq/blob/main/README_EN.md) about how to use the docker image.
 
 # Additional information
 
