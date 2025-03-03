@@ -1,6 +1,5 @@
 # nsr_acc_issue
 
-
 # Overview
 This page serves as the supplement page for Hayakawa et al. in the NSR ACC issue.
 A tutorial-style code is provided that aligns with the content of the paper using actual data.
@@ -12,15 +11,15 @@ In this tutorial, we use data from the P1 stage of mouse development, comparing 
 
 The analysis consists of the following five steps, each linked to a specific code implementation:
 
-- [01_load](https://github.com/bioinfo-tsukuba/nsr_acc_issue/blob/main/docs/01_load.html)
+- [01_load](https://bioinfo-tsukuba.github.io/nsr_acc_issue/01_load.html)
   - Load scRNA-seq data in R and prepare it for analysis with Seurat.
-- [02_quality_control](https://htmlpreview.github.io/?https://github.com/bioinfo-tsukuba/nsr_acc_issue/blob/main/analysis/html/02_qaulity_control.html)
+- [02_quality_control](https://bioinfo-tsukuba.github.io/nsr_acc_issue/02_qaulity_control.html)
   - Perform quality control on scRNA-seq data and remove low-quality cells.
-- [03_data_preprocessing_and_integration](https://htmlpreview.github.io/?https://github.com/bioinfo-tsukuba/nsr_acc_issue/blob/main/analysis/html/03_data_preprocessing_and_integration.html)
+- [03_data_preprocessing_and_integration](https://bioinfo-tsukuba.github.io/nsr_acc_issue/03_data_preprocessing_and_integration.html)
   - Execute the basic workflow for scRNA-seq data analysis.
-- [04_celltype_annotation](https://htmlpreview.github.io/?https://github.com/bioinfo-tsukuba/nsr_acc_issue/blob/main/analysis/html/04_celltype_annotation.html)
+- [04_celltype_annotation](https://bioinfo-tsukuba.github.io/nsr_acc_issue/04_celltype_annotation.html)
   - Annotate cell types for each cell. This section introduces three different methods for cell type annotation.
-- [05_comparative_analysis](https://htmlpreview.github.io/?https://github.com/bioinfo-tsukuba/nsr_acc_issue/blob/main/analysis/html/05_comparative_analysis.html)
+- [05_comparative_analysis](https://bioinfo-tsukuba.github.io/nsr_acc_issue/05_comparative_analysis.html)
   - Perform a comparative analysis between wild-type and Fezf2 mutants to identify genes that are specifically highly expressed in each condition.
 
 # Additional Information
@@ -46,4 +45,3 @@ This file includes columns specifying age, area, condition, and the path to the 
 
 ## Managing Analysis Environments Using Docker
 For this tutorial, we used an [Rstudio server Docker image](https://hub.docker.com/repository/docker/hway/rstudio_scrnaseq/general) that includes necessary libraries for scRNA-seq analysis.
-
