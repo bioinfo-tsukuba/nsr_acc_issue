@@ -1,5 +1,3 @@
-# nsr_acc_issue
-
 # Overview
 This page serves as the supplement page for Hayakawa et al. in the NSR ACC issue.
 A tutorial-style code is provided that aligns with the content of the paper using actual data.
@@ -8,6 +6,8 @@ The tutorial starts from loading scRNA-seq data in R and proceeds to a comparati
 
 The dataset used in this tutorial is from [Di Bella et al. 2021](https://www.nature.com/articles/s41586-021-03670-5).
 In this tutorial, we use data from the cerebral cortex of the P1 stage of mouse development, comparing wild-type and Fezf2 mutant samples to identify genes that are specifically highly expressed in each condition.
+
+# Tutorial
 
 The analysis consists of the following five steps, each linked to a specific code implementation:
 
