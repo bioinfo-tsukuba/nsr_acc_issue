@@ -1,4 +1,4 @@
-data/all
+data/all/*.h5
 data/SCP1290
 
 jp_analysis/
