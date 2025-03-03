@@ -22,14 +22,22 @@ The analysis consists of the following five steps, each linked to a specific cod
 - [05_comparative_analysis](https://bioinfo-tsukuba.github.io/nsr_acc_issue/05_comparative_analysis.html)
   - Perform a comparative analysis between wild-type and Fezf2 mutants to identify genes that are specifically highly expressed in each condition.
 
-# Additional Information
+# How to run the tutorial on your own
 ## Preparation of scRNA-seq Data
 ### Overview of the Dataset
 The dataset consists of scRNA-seq data from the cerebral cortex at multiple developmental stages in wild-type and Fezf2 mutant mice, obtained from [Di Bella et al. 2021](https://www.nature.com/articles/s41586-021-03670-5).
 
 ### Data Sources
 - [scRNA-seq Data](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE153164) (GEO)
-- [Metadata](https://singlecell.broadinstitute.org/single_cell/study/SCP1290/molecular-logic-of-cellular-diversification-in-the-mammalian-cerebral-cortex) (1) Go to the page, (2) Sign in (from the upper left button), (3) the Go to page again, (4) Click "Download", (5) Download "metaData_scDevSC.txt"
+  1. In "Supplementary file" section, click "(http)" to download "GSE153164_RAW.tar".
+  2. Uncompress the downloaded "GSE153164_RAW.tar".
+  3. We will use `GSM4635080_P1_S1_filtered_gene_bc_matrices_h5.h5` and `GSM4635087_Fezf2KO_P1_filtered_feature_bc_matrix.h5`.
+- [Metadata](https://singlecell.broadinstitute.org/single_cell/study/SCP1290/molecular-logic-of-cellular-diversification-in-the-mammalian-cerebral-cortex)
+  1. Go to the page
+  2. Sign in (from the upper left button)
+  3. Go to the page again
+  4. Click "Download" to move to Download page
+  5. Download "metaData_scDevSC.txt"
 
 ## datasheet.tsv
 A TSV file containing metadata for the scRNA-seq data, with relevant columns.
