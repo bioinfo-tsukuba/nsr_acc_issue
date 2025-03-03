@@ -1,0 +1,140 @@
+---
+title: "Loading scRNA-seq Data"
+author: "Yoshinori Hayakawa"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    df_print: "paged"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading scRNA-seq Data
+
+### Objective  
+
+* Load expression matrix data and make it compatible with Seurat.  
+* Add cell metadata to the Seurat object.  
+
+### Data Loading
+
+#### Load Required Libraries
+```{r,message=FALSE}
+# code:1-1
+library(Seurat)
+library(tidyverse)  # Includes dplyr, ggplot2, etc.
+```
+
+#### Load Data Information  
+Load the path to the expression matrix data and a text file containing metadata.
+```{r,message=FALSE}
+# code:1-2
+# Path to the text file summarizing expression matrix information
+data_sheet_path <- "./data_info/datasheet.tsv"
+```
+
+```{r,message=FALSE}
+# code:1-3
+data_sheet_df <- read_tsv(data_sheet_path)
+```
+
+Check the contents of the data file.  
+It contains metadata and paths to the datasets.
+```{r,message=FALSE}
+# code:1-4
+data_sheet_df
+```
+
+Extract metadata associated with the expression data as vectors.
+```{r,message=FALSE}
+# Metadata vectors
+# code:1-5
+age_vec <- data_sheet_df %>% pull(age)
+area_vec <- data_sheet_df %>% pull(area)
+condition_vec <- data_sheet_df %>% pull(condition)
+sample_vec <- paste0(age_vec, "_", area_vec, "_", condition_vec)
+
+names(age_vec) <- sample_vec
+names(area_vec) <- sample_vec
+names(condition_vec) <- sample_vec
+names(sample_vec) <- sample_vec
+
+# Path vectors for expression matrix data
+# code:1-6
+path_vec <- data_sheet_df %>% pull(path)
+names(path_vec) <- sample_vec
+```
+
+#### Load Expression Matrices  
+
+```{r,message=FALSE}
+# Manage multiple expression matrices as a list.
+# code:1-7
+orig_mtx_list <- list()
+for(smn in names(path_vec)){
+  print(smn)
+  orig_mtx_list[[smn]] <- Read10X_h5(path_vec[smn])
+}
+```
+
+Save the raw expression matrix data as an R object.
+```{r,message=FALSE}
+# code:1-8
+saveRDS(orig_mtx_list, "./output/01_load/obj/orig_mtx_list.RDS")
+```
+
+### Create Seurat Object  
+Convert the loaded expression matrix into a Seurat object.  
+`min.cells = 3`: Genes expressed in fewer than 3 cells are removed.  
+```{r,message=FALSE}
+# code:1-9
+# Prepare a list to store Seurat objects
+created_seurat_obj_list <- list()
+
+# Create Seurat objects
+for(snm in names(orig_mtx_list)) {  # Iterate over multiple files
+  print(snm)
+  created_seurat_obj_list[[snm]] <- CreateSeuratObject(orig_mtx_list[[snm]], min.cells = 3, project = snm)
+}
+```
+
+Check the created Seurat objects.
+```{r,message=FALSE}
+# code:1-10
+created_seurat_obj_list
+```
+
+Check the metadata of the Seurat objects.
+```{r,message=FALSE}
+# code:1-11
+head(created_seurat_obj_list[[1]][[]])
+head(created_seurat_obj_list[[2]][[]])
+```
+
+#### Add Metadata to Seurat Object  
+
+```{r,message=FALSE}
+# code:1-12
+for(smn in names(created_seurat_obj_list)){
+  print(smn)
+  created_seurat_obj_list[[smn]][[]]["age"]        <- age_vec[smn]
+  created_seurat_obj_list[[smn]][[]]["area"]        <- area_vec[smn]
+  created_seurat_obj_list[[smn]][[]]["condition"]   <- condition_vec[smn]
+  created_seurat_obj_list[[smn]][[]]["sample_name"] <- sample_vec[smn]
+}
+```
+
+Verify that metadata has been added.
+```{r,message=FALSE}
+# code:1-13
+head(created_seurat_obj_list[[1]][[]])
+head(created_seurat_obj_list[[2]][[]])
+```
+
+#### Save Seurat Object Before Quality Control  
+```{r,message=FALSE}
+# code:1-14
+saveRDS(created_seurat_obj_list, "./output/01_load/obj/created_seurat_obj_list.RDS")

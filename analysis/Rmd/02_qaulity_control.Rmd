@@ -1,0 +1,292 @@
+---
+title: "Quality Control"
+author: "Yoshinori Hayakawa"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    df_print: "paged"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Quality Control
+
+### Objective  
+Prior to conducting the basic Seurat analysis workflow, perform quality control (QC) to remove low-quality cells.  
+
+### Quality Control Workflow
+1. Automated quality control using "ddqc"  
+2. Removal of doublet cells using "DoubletFinder"  
+
+#### Load Required Libraries
+```{r, message=FALSE}
+# Load necessary libraries
+library(Seurat)
+library(tidyverse)       # Includes dplyr, ggplot2, etc.
+
+library(ddqcR)           # Automated Quality Control tool
+library(DoubletFinder)   # Doublet removal tool
+```
+
+#### Load Data
+```{r, message=FALSE}
+# Load the Seurat object containing cell metadata
+created_seurat_obj_list <- readRDS("./output/01_load/obj/created_seurat_obj_list.RDS")
+
+# Load the original expression matrix without preprocessing
+orig_mtx_list <- readRDS("./output/01_load/obj/orig_mtx_list.RDS")
+```
+
+#### Calculate the Proportion of Mitochondrial and Ribosomal Genes
+Before conducting QC, calculate the proportions of mitochondrial and ribosomal genes.
+```{r, message=FALSE}
+for(smn in names(created_seurat_obj_list)) {
+  # Mitochondrial gene percentage
+  created_seurat_obj_list[[smn]][["bfqc_percent.mt"]] <- 
+    PercentageFeatureSet(created_seurat_obj_list[[smn]], pattern = "^mt-")
+  
+  # Ribosomal gene percentage
+  created_seurat_obj_list[[smn]][["bfqc_percent.rp"]] <- 
+    PercentageFeatureSet(created_seurat_obj_list[[smn]], pattern = "(?i)^RP[SL][[:digit:]]|^RPLP[[:digit:]]|^RPSA")
+}
+```
+
+#### Automated Quality Control using ddqc
+
+- **Filtering criteria:**  
+  - Cells with values significantly higher (percent.mito) or lower (nCount_RNA, nFeature_RNA) than x MADs (Median Absolute Deviation, default x = 2) from the cluster median are removed.
+  - If the computed threshold within a cluster is greater than 200 for nFeature_RNA or less than 10% for percent.mito, they are set to 200 and 10%, respectively.
+
+- **Generated plots:**  
+  - A log2-scaled nFeature_RNA distribution per cluster with a red line at 200 genes (log2 scale: 7.64).
+  - A mitochondrial gene percentage distribution per cluster with a red line at 10%.
+
+```{r, message=FALSE}
+ddqc_seurat_obj_list <- list()
+ddqc_df_list <- list()
+
+for(smn in names(created_seurat_obj_list)){
+  print(paste0("ddqc: ", smn))
+  tmpdata <- initialQC(created_seurat_obj_list[[smn]])
+  ddqc_df_list[[smn]] <- ddqc.metrics(tmpdata)
+  ddqc_seurat_obj_list[[smn]] <- filterData(tmpdata, ddqc_df_list[[smn]])
+}
+```
+
+Check the updated metadata:
+```{r, message=FALSE}
+head(ddqc_seurat_obj_list[[1]][[]])
+```
+
+Save the filtered Seurat objects:
+```{r, message=FALSE}
+saveRDS(ddqc_seurat_obj_list, "./output/02_qc/obj/ddqc_seurat_obj_list.RDS")
+saveRDS(ddqc_df_list, "./output/02_qc/obj/ddqc_df_list.RDS")
+```
+
+#### Doublet Removal using DoubletFinder
+
+##### Preprocessing for Doublet Detection
+Before running "DoubletFinder", a basic Seurat analysis workflow must be performed:
+```{r, message=FALSE}
+for_doubletfinder_seurat_obj_list <- lapply(ddqc_seurat_obj_list, NormalizeData)
+for_doubletfinder_seurat_obj_list <- lapply(for_doubletfinder_seurat_obj_list, FindVariableFeatures)
+for_doubletfinder_seurat_obj_list <- lapply(for_doubletfinder_seurat_obj_list, ScaleData)
+for_doubletfinder_seurat_obj_list <- lapply(for_doubletfinder_seurat_obj_list, RunPCA)
+for_doubletfinder_seurat_obj_list <- lapply(for_doubletfinder_seurat_obj_list, RunUMAP, dims = 1:10)
+for_doubletfinder_seurat_obj_list <- lapply(for_doubletfinder_seurat_obj_list, FindNeighbors)
+for_doubletfinder_seurat_obj_list <- lapply(for_doubletfinder_seurat_obj_list, FindClusters)
+```
+
+##### Detecting Doublets with DoubletFinder
+```{r, message=FALSE, results='hide'}
+set.seed(1)
+doublet_finder_res_df_list <- list()
+
+for(nm in names(for_doubletfinder_seurat_obj_list)){
+  print(paste0("DoubletFinder: ", nm))
+  tmp_seurat_obj <- for_doubletfinder_seurat_obj_list[[nm]]
+  
+  sweep.res.list_pmbc <- paramSweep(tmp_seurat_obj, PCs = 1:10, sct = FALSE)
+  sweep.stats_pmbc <- summarizeSweep(sweep.res.list_pmbc, GT = FALSE)
+  bcmvn_pmbc <- find.pK(sweep.stats_pmbc)
+  
+  homotypic.prop <- modelHomotypic(tmp_seurat_obj[[]]$seurat_clusters)
+  nExp_poi <- round(0.075 * nrow(tmp_seurat_obj[[]]))
+  nExp_poi.adj <- round(nExp_poi * (1 - homotypic.prop))
+  
+  pN <- 0.25
+  pK <- bcmvn_pmbc %>% arrange(desc(BCmetric)) %>% pull(pK) %>% as.character %>% as.numeric %>% .[1]
+  
+  base_char <- paste("DF.classifications", pN, pK, nExp_poi, sep = "_")
+  adj_char  <- paste("DF.classifications", pN, pK, nExp_poi.adj, sep = "_")
+  char_reuse_pANN <- paste("pANN", pN, pK, nExp_poi, sep = "_")
+  
+  tmp_seurat_obj <- doubletFinder(tmp_seurat_obj, PCs = 1:10, pN = pN, pK = pK, nExp = nExp_poi, reuse.pANN = FALSE, sct = FALSE)
+  tmp_seurat_obj <- doubletFinder(tmp_seurat_obj, PCs = 1:10, pN = pN, pK = pK, nExp = nExp_poi.adj, reuse.pANN = char_reuse_pANN, sct = FALSE)
+  
+  tmp_doublet_finder_res_df <- tmp_seurat_obj[[]][c(base_char, adj_char)]
+  colnames(tmp_doublet_finder_res_df) <- c("double_flg", "doublet_adj_flg")
+  doublet_finder_res_df_list[[nm]] <- tmp_doublet_finder_res_df
+}
+```
+
+##### Removing Cells Identified as Doublets by "DoubleFinder"
+```{r, message=FALSE}
+# code:2-9
+doubletfinder_ddqc_seurat_obj_list <- list()
+for (nm in names(ddqc_seurat_obj_list)) {
+  # Add DoubletFinder results to metadata.
+  doubletfinder_ddqc_seurat_obj_list[[nm]] <-
+    AddMetaData(
+      ddqc_seurat_obj_list[[nm]],
+      doublet_finder_res_df_list[[nm]]
+    )
+  # Extract only cells identified as singlets by DoubletFinder.
+  doubletfinder_ddqc_seurat_obj_list[[nm]] <- subset(doubletfinder_ddqc_seurat_obj_list[[nm]], subset = doublet_adj_flg %in% c("Singlet"))
+}
+
+# Verify metadata to ensure DoubletFinder results have been added.
+head(doubletfinder_ddqc_seurat_obj_list[[1]][[]])
+```
+
+##### Saving Seurat Objects After Doublet Removal
+```{r, message=FALSE}
+# code:2-10
+saveRDS(doubletfinder_ddqc_seurat_obj_list, "./output/02_qc/obj/doubletfinder_ddqc_seurat_obj_list.RDS")
+```
+
+### Quality Control Evaluation
+Perform summarization before and after Quality Control (QC).
+To do so, collect metadata from each Seurat object.
+```{r, message=FALSE}
+# code:2-11
+get_metadata <- function(smn, obj){
+  return(obj[[smn]][[]])
+}
+before_qc_metadata_df <- do.call(bind_rows, lapply(names(created_seurat_obj_list), get_metadata, obj = created_seurat_obj_list))
+colnames(before_qc_metadata_df)[which(colnames(before_qc_metadata_df) %in% c("bfqc_percent.mt", "bfqc_percent.rp"))] <- c("percent.mt", "percent.rb")
+after_qc_metadata_df  <- do.call(bind_rows, lapply(names(ddqc_seurat_obj_list), get_metadata, obj = ddqc_seurat_obj_list))
+after_qc_doubletf_metadata_df <- do.call(bind_rows, lapply(names(doubletfinder_ddqc_seurat_obj_list), get_metadata, obj = doubletfinder_ddqc_seurat_obj_list))
+```
+
+##### Visualizing Distribution Changes in "nCount_RNA", "nFeature_RNA", "percent.mt", and "percent.rb" Using Violin Plots
+
+Aggregate necessary information for ViolinPlot visualization.
+```{r, message=FALSE}
+# code:2-12
+plot_vars <- c("nCount_RNA", "nFeature_RNA", "percent.mt", "percent.rb")
+# Consolidate metadata information.
+qc_result_metadata_df <- bind_rows(
+  before_qc_metadata_df %>%
+    dplyr::select(condition, {{ plot_vars }}) %>%
+    mutate(qc="before_qc"),
+  after_qc_metadata_df %>%
+    dplyr::select(condition, {{ plot_vars }}) %>%
+    mutate(qc="after_ddqc"),
+  after_qc_doubletf_metadata_df %>%
+    dplyr::select(condition, {{ plot_vars }}) %>%
+    mutate(qc="after_ddqc_doubletfinder")
+)
+# Convert the "qc" column to a factor and set category order.
+qc_result_metadata_df$qc <- factor(qc_result_metadata_df$qc, levels = c("before_qc", "after_ddqc", "after_ddqc_doubletfinder"))
+qc_result_metadata_df$condition <- factor(qc_result_metadata_df$condition, levels = c("WT", "Fezf2KO"))
+```
+
+Plot Violin Plots for "nCount_RNA", "nFeature_RNA", "percent.mt", and "percent.rb".
+```{r, message=FALSE}
+# code:2-13
+violinplot_list <- list()
+for(var in plot_vars){
+  print(var)
+  target_var <- sym(var)  # Convert string to symbol
+  violinplot_list[[var]] <-
+    ggplot(data = qc_result_metadata_df, mapping = aes(x = condition, y = {{ target_var }}, fill = qc)) +
+    geom_violin(position = position_dodge(width = 0.9), width = 1.0, draw_quantiles = c(0.25, 0.5, 0.75)) +
+    ggtitle(paste("QC result: ", var)) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+}
+```
+
+Verify Violin Plots.
+```{r, message=FALSE}
+# code:2-14
+violinplot_list
+```
+
+
+##### Visualizing Changes in Gene and Cell Counts Using Bar Plots
+
+Collect gene and cell count information from Seurat objects.
+```{r, message=FALSE}
+# code:2-15
+data_vec <- c("rawdata", "before_qc", "after_ddqc", "after_ddqc_doubletfinder")
+# Collect gene and cell count information from Seurat objects.
+gene_cell_pop_list <- list(
+  as.data.frame(t(as.data.frame(lapply(orig_mtx_list, dim)))),
+  as.data.frame(t(as.data.frame(lapply(created_seurat_obj_list, dim)))),
+  as.data.frame(t(as.data.frame(lapply(ddqc_seurat_obj_list, dim)))),
+  as.data.frame(t(as.data.frame(lapply(doubletfinder_ddqc_seurat_obj_list, dim))))
+)
+```
+
+Prepare for Bar Plot visualization.
+```{r, message=FALSE}
+# code:2-16
+names(gene_cell_pop_list) <- data_vec
+for(dtn in data_vec) {
+  colnames(gene_cell_pop_list[[dtn]]) <- c("gene_number", "cell_number")
+  gene_cell_pop_list[[dtn]] <-
+    gene_cell_pop_list[[dtn]] %>%
+    mutate(data_name = dtn)
+  gene_cell_pop_list[[dtn]]["sample"] <- rownames(gene_cell_pop_list[[dtn]])
+  row.names(gene_cell_pop_list[[dtn]]) <- NULL
+}
+gene_cell_pop_df <- 
+  do.call(bind_rows, gene_cell_pop_list) %>%
+  mutate(data_name = factor(data_name, levels = c("rawdata", "before_qc", "after_ddqc", "after_ddqc_doubletfinder"))) %>%
+  separate(col = sample, into = c("age", "area", "condition"), sep = "_") %>%
+  mutate(condition = factor(condition, levels = c("WT", "Fezf2KO")))
+```
+
+Generate Bar Plots for gene and cell counts.
+```{r, message=FALSE}
+# code:2-17
+plot_vars <- c("gene_number", "cell_number")
+barplot_list <- list()
+for(var in plot_vars){
+  target_var <- sym(var)  # 文字列をシンボルに変換
+  barplot_list[[var]] <-
+    ggplot(data = gene_cell_pop_df, mapping = aes(x = condition, y = {{ target_var }}, fill = data_name)) +
+    geom_col(position = position_dodge()) +
+    ggtitle(paste("QC result: ", var)) + # タイトルを追加
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+}
+```
+
+Verify Bar Plots.
+```{r, message=FALSE}
+# code:2-18
+barplot_list
+```
+
+### Merging Seurat Objects
+
+Merge all scRNA-seq data into a single Seurat object, with each dataset stored in a layer.
+```{r, message=FALSE}
+# code:2-19
+merged4norm_seurat_obj <- doubletfinder_ddqc_seurat_obj_list[[1]]
+for (snm in names(doubletfinder_ddqc_seurat_obj_list)[2:length(doubletfinder_ddqc_seurat_obj_list)]) {
+  merged4norm_seurat_obj <- merge(merged4norm_seurat_obj, doubletfinder_ddqc_seurat_obj_list[[snm]])
+}
+```
+
+Save the merged Seurat object.
+```{r, message=FALSE}
+# code:2-20
+saveRDS(merged4norm_seurat_obj, "./output/02_qc/obj/merged4norm_seurat_obj.RDS")
+```
+

@@ -1,0 +1,299 @@
+---
+title: "Cell Type Annotation"
+author: "Yoshinori Hayakawa"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 5
+    df_print: "paged"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Cell Type Annotation
+
+## Objective
+To assign cell type information to each cell using known marker genes and pre-annotated datasets.
+
+## Load Required Libraries
+```{r, message=FALSE}
+# code:4-1
+library(Seurat)
+library(tidyverse)
+source("./tools/viz_tools.R") 
+```
+
+## Load Data
+Load the Seurat object processed in `03_norm2integ`.
+```{r, message=FALSE}
+# code:4-2
+integ_norm_seurat_obj <- readRDS("./output/03_norm2integ/obj/integ_norm_seurat_obj.RDS")
+
+# code:4-3
+integ_norm_seurat_obj$condition <- factor(integ_norm_seurat_obj$condition, levels = c("WT", "Fezf2KO"))
+```
+
+---
+
+## 1. Assign Cell Types to Clusters Identified by Clustering
+
+### 1.1 Cell Type Annotation using ScType
+Automatically determine cell types using ScType, which performs cell type annotation based on a marker gene list.
+
+Load the ScType R scripts (ScType is not provided as an R package but as a set of functions).
+```{r, message=FALSE}
+# code:4-4
+source("/home/app/sc-type/R/gene_sets_prepare.R")
+source("/home/app/sc-type/R/sctype_score_.R")
+library(HGNChelper)
+```
+
+Specify the path to the ScType database file (marker gene list).
+```{r, message=FALSE}
+# code:4-5
+db_ = "/home/app/sc-type/ScTypeDB_full.xlsx"
+# Customize by editing `ScTypeDB_full.xlsx` if needed.
+```
+
+Specify the tissue type for ScType database.
+```{r, message=FALSE}
+# code:4-6
+tissue = "Brain" # Other options: Immune system, Pancreas, Liver, Eye, etc.
+```
+
+Prepare marker gene sets.
+```{r, message=FALSE}
+# code:4-7
+gs_list = gene_sets_prepare(db_, tissue)
+```
+
+Extract the `scale.data` layer from the Seurat object.
+```{r, message=FALSE}
+# code:4-8
+scaled_data <- GetAssayData(object = integ_norm_seurat_obj, assay = "RNA", layer = "scale.data")
+```
+
+Calculate the cell-type enrichment score.
+```{r, message=FALSE}
+# code:4-9
+es.max = sctype_score(scRNAseqData = scaled_data,
+                      scaled = TRUE,
+                      gs = gs_list$gs_positive,
+                      gs2 = gs_list$gs_negative)
+```
+
+Compute ScType scores.
+```{r, message=FALSE}
+# code:4-10
+cL_results <- do.call("rbind", lapply(unique(integ_norm_seurat_obj[[]]$cca_clusters), function(cl){
+  es.max.cl <- sort(rowSums(es.max[ ,rownames(integ_norm_seurat_obj[[]][integ_norm_seurat_obj[[]]$cca_clusters==cl, ])]), decreasing = TRUE)
+  head(data.frame(cluster = cl, type = names(es.max.cl), scores = es.max.cl, ncells = sum(integ_norm_seurat_obj[[]]$cca_clusters==cl)), 10)
+}))
+```
+
+Assign cell types to each cluster based on ScType scores.
+```{r, message=FALSE}
+# code:4-11
+sctype_scores <- cL_results %>% group_by(cluster) %>% top_n(n = 1, wt = scores)
+```
+
+Assign "Unknown" to clusters with low confidence scores.
+```{r, message=FALSE}
+# code:4-12
+sctype_scores$type[as.numeric(as.character(sctype_scores$scores)) < sctype_scores$ncells/4] <- "Unknown"
+```
+
+Store the assigned cell types in Seurat object metadata.
+```{r, message=FALSE}
+# code:4-13
+integ_norm_seurat_obj[[]]$celltype_sctype <- ""
+for(j in unique(sctype_scores$cluster)){
+  cl_type <- sctype_scores[sctype_scores$cluster==j,]
+  integ_norm_seurat_obj[[]]$celltype_sctype[integ_norm_seurat_obj[[]]$cca_clusters == j] <- as.character(cl_type$type[1])
+}
+```
+
+Visualize the annotated cell types using DimPlot.
+```{r, message=FALSE, fig.width = 13, fig.height=6}
+# code:4-14
+DimPlot(
+  integ_norm_seurat_obj,
+  reduction = "umap.cca",
+  group.by = c("cca_clusters", "celltype_sctype"),
+  label = TRUE,
+  repel = TRUE
+) + NoLegend()
+```
+
+Save the annotated Seurat object.
+```{r, message=FALSE}
+# code:4-15
+annotated_integ_norm_seurat_obj <- integ_norm_seurat_obj
+```
+
+Check the number of cells for each annotated cell type.
+```{r, message=FALSE, fig.width = 20, fig.height=8}
+# code:4-16
+cell_number_pop_viz(annotated_integ_norm_seurat_obj, "condition", "celltype_sctype")
+```
+
+---
+
+## 2. Assigning Cell Types Without Using Clustering Results  
+### 2.1 Cell Type Annotation Using Seurat FindTransferAnchors/DataTransfer   
+By utilizing an annotated scRNA-seq dataset as a reference, cell types in the dataset of interest can be determined by mapping it to the reference data.
+
+Seurat provides functions (FindTransferAnchors / DataTransfer) specifically designed for cell type annotation using reference datasets. However, this method assumes that the cells in the reference dataset exhibit some degree of similarity to the cells in the dataset of interest. The annotation results depend on the cell types in the reference dataset. Additionally, if the gene names in the reference dataset differ significantly from those in the target dataset, this method cannot be applied.
+
+For this demonstration, the reference dataset used is the original annotated dataset from wild-type P1.
+
+Load the pre-prepared wild-type P1 dataset.  
+```{r, message=FALSE}
+# code:4-17
+ref_seurat_obj <- readRDS("../data/reference/P1_ref_seurat_obj.RDS")
+```
+
+```{r, message=FALSE}
+# Perform NormalizeData and FindVariableFeatures.
+# code:4-18
+ref_seurat_obj <- NormalizeData(ref_seurat_obj)
+ref_seurat_obj <- FindVariableFeatures(ref_seurat_obj)
+```
+
+Find anchors (identify similar features between query and reference datasets).  
+```{r, message=FALSE}
+# query: Seurat object to be annotated
+# reference: Annotated wild-type P1 dataset from the original study
+
+# code:4-19
+anchors <- FindTransferAnchors(
+  reference = ref_seurat_obj,               # Reference dataset
+  query = annotated_integ_norm_seurat_obj,  # Target dataset
+  normalization.method = "LogNormalize"     # Normalization method
+)
+```
+
+Transfer labels  
+Using the identified anchors, predict the cell types of the target dataset based on the reference dataset.
+```{r, message=FALSE}
+# code:4-20
+predictions <- TransferData(
+  anchorset = anchors,
+  refdata = ref_seurat_obj$New_cellType # Column name containing cell type annotations in the reference dataset
+)
+```
+
+Add the predicted cell types to the metadata of the target dataset.
+```{r, message=FALSE}
+# code:4-21
+annotated_integ_norm_seurat_obj <-
+  AddMetaData(object = annotated_integ_norm_seurat_obj,
+              metadata = predictions["predicted.id"])
+```
+
+Visualize the annotation results using DimPlot.
+```{r, message=FALSE, fig.width = 20, fig.height=8}
+# code:4-22
+DimPlot(
+  annotated_integ_norm_seurat_obj,
+  reduction = "umap.cca",
+  group.by = c("cca_clusters", "predicted.id"),
+)
+```
+
+Check the number of cells per annotated cell type.
+```{r, message=FALSE, fig.width = 22, fig.height=12}
+# code:4-23
+cell_number_pop_viz(annotated_integ_norm_seurat_obj, "condition", "predicted.id")
+```
+
+---
+
+### 2.2 Cell Type Annotation Using Azimuth
+If a suitable reference dataset is available within Azimuth, this approach provides a simple and efficient way to perform annotation. The underlying algorithm is the same as in Section 2.1.  
+
+Load the required libraries.
+```{r, message=FALSE}
+# code:4-24
+library(Azimuth)
+library(SeuratData)
+```
+
+Use the `RunAzimuth` function to map the dataset of interest to an Azimuth reference dataset.  
+Mapping to the Mouse Motor Cortex reference dataset.  
+```{r, message=FALSE}
+# code:4-25
+tmp_seurat_obj <- RunAzimuth(query = annotated_integ_norm_seurat_obj, reference = "mousecortexref")
+```
+
+Add the predicted cell type annotations to the metadata of the dataset.
+```{r, message=FALSE}
+# code:4-26
+annotated_integ_norm_seurat_obj <-
+  AddMetaData(object = annotated_integ_norm_seurat_obj,
+              metadata = tmp_seurat_obj[[]][c("predicted.class", "predicted.subclass")]
+              )
+```
+
+Visualize the annotation results using DimPlot.
+```{r, message=FALSE, fig.width = 20, fig.height=8}
+# code:4-27
+DimPlot(
+  annotated_integ_norm_seurat_obj,
+  reduction = "umap.cca",
+  group.by = c("cca_clusters", "predicted.class", "predicted.subclass"),
+)
+```
+
+Check the number of cells per predicted class.
+```{r, message=FALSE, fig.width = 20, fig.height=8}
+# code:4-28
+cell_number_pop_viz(annotated_integ_norm_seurat_obj, "condition", "predicted.class")
+```
+
+Check the number of cells per predicted subclass.
+```{r, message=FALSE, fig.width = 20, fig.height=8}
+# code:4-29
+cell_number_pop_viz(annotated_integ_norm_seurat_obj, "condition", "predicted.subclass")
+```
+
+---
+
+## Comparison of Cell Type Annotations from Different Methods
+To compare the cell type annotation results obtained from ScType (marker gene-based), Azimuth (mouse reference dataset), and DataTransfer (prepared reference dataset), a River Plot is used to visualize the correspondences between annotations.
+
+```{r, message=FALSE, fig.width = 23, fig.height=20}
+# code:4-30
+# Load required libraries
+library(ggalluvial)
+
+# Generate River Plot
+# code:4-31
+ggplot(data = annotated_integ_norm_seurat_obj[[]],
+       aes(axis1 = predicted.id,
+           axis2 = celltype_sctype,
+           axis3 = predicted.class,
+           axis4 = predicted.subclass,
+           )) +
+  scale_x_discrete(limits = c("celltype_transfer\nfrom_reference",
+                            "celltype_sctype",
+                            "Azimuth_class",
+                            "Azimuth_subclass"
+                            ),
+                 expand = c(.2, .05)) +
+  xlab("celltype_annotation_methods") +
+  geom_alluvium() +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  theme_minimal() +
+  ggtitle("Correspondence of Cell Types Across Annotation Methods")
+```
+
+Save the annotated Seurat object.
+```{r, message=FALSE}
+# code:4-32
+saveRDS(annotated_integ_norm_seurat_obj, "./output/04_celltype_annotation/obj/annotated_integ_norm_seurat_obj.RDS")
+```
+

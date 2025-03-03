@@ -1,0 +1,133 @@
+---
+title: "Seurat Basic Analysis Workflow"
+author: "Yoshinori Hayakawa"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 5
+    df_print: "paged"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Seurat Basic Analysis Workflow
+
+### Objective
+Preprocess quality-controlled scRNA-seq data for downstream analyses such as comparative analysis.
+
+#### Overview of Seurat Basic Analysis Workflow
+* Normalize sequencing depth differences among cells
+* Reduce dimensionality of high-dimensional data
+* Integrate datasets measured under different conditions
+* Classify similar cell populations
+
+#### Steps in the Seurat Basic Analysis Workflow
+1. Data normalization
+2. Identification of highly variable genes (HVGs)
+3. Data scaling
+4. Principal Component Analysis (PCA)
+5. Data integration
+6. k-nearest neighbor (kNN) graph construction
+7. Clustering
+8. Uniform Manifold Approximation and Projection (UMAP)
+
+### Load Required Libraries
+```{r, message=FALSE}
+library(Seurat)
+library(ggplot2)
+```
+
+### Load Data
+Load the Seurat object created in the `02_qc` step.
+```{r, message=FALSE}
+merged4norm_seurat_obj <- readRDS("./output/02_qc/obj/merged4norm_seurat_obj.RDS")
+```
+
+### Seurat Basic Analysis Workflow
+Seurat V5 allows simultaneous processing of multiple datasets stored in `layer` of a single Seurat object.
+
+#### 1. Data Normalization
+Since total read counts vary across cells, normalization is required to enable comparison. The default method scales the total read count per cell to 10,000, followed by log transformation.
+```{r, message=FALSE}
+norm_seurat_obj <- NormalizeData(merged4norm_seurat_obj)
+```
+
+#### 2. Identification of Highly Variable Genes (HVGs)
+Highly variable genes are crucial for defining cellular characteristics, while genes with low variability (e.g., housekeeping genes) are expressed similarly across all cells. By default, 2,000 genes are selected.
+```{r, message=FALSE}
+norm_seurat_obj <- FindVariableFeatures(norm_seurat_obj)
+```
+
+Visualizing the distribution of HVGs:
+```{r, message=FALSE}
+VariableFeaturePlot(norm_seurat_obj)
+```
+
+#### 3. Data Scaling
+Preparation for PCA. Scaling enables gene-to-gene comparison. By default, scaling is performed only on HVGs to reduce computational load. Each gene is transformed to have a mean of 0 and a standard deviation of 1.
+```{r, message=FALSE}
+norm_seurat_obj <- ScaleData(norm_seurat_obj)
+```
+
+#### 4. Principal Component Analysis (PCA)
+Dimensionality reduction is performed to convert high-dimensional scRNA-seq data into a lower-dimensional representation while preserving its essential features.
+```{r, message=FALSE}
+norm_seurat_obj <- RunPCA(norm_seurat_obj)
+```
+
+#### 5. Data Integration
+Integration of datasets across experimental batches, donors, or conditions is a crucial step in scRNA-seq workflows. Seurat V5 introduces the `IntegrateLayers` function, which supports multiple integration methods.
+
+##### Canonical Correlation Analysis (CCA) Integration
+```{r, message=FALSE}
+integ_norm_seurat_obj <- IntegrateLayers(
+  object = norm_seurat_obj,
+  method = CCAIntegration,
+  orig.reduction = "pca",
+  new.reduction = "integrated.cca",
+  verbose = FALSE
+)
+```
+
+#### 6. k-Nearest Neighbor (kNN) Graph Construction
+Preparation for clustering. The `reduction` argument specifies the dimensionality reduction result to be used.
+```{r, message=FALSE}
+integ_norm_seurat_obj <- FindNeighbors(integ_norm_seurat_obj, 
+                                       reduction = "integrated.cca",
+                                       dims = 1:30)
+```
+
+#### 7. Clustering
+Cells are classified based on their gene expression profiles. The `resolution` parameter controls cluster granularity: higher values lead to more clusters, lower values lead to fewer clusters.
+```{r, message=FALSE}
+integ_norm_seurat_obj <- FindClusters(integ_norm_seurat_obj, cluster.name = "cca_clusters")
+```
+
+#### 8. UMAP
+A non-linear dimensionality reduction method that visualizes data structure and patterns in two or three dimensions.
+```{r, message=FALSE}
+integ_norm_seurat_obj <- RunUMAP(integ_norm_seurat_obj, 
+                                 reduction = "integrated.cca",
+                                 dims = 1:30,
+                                 reduction.name = "umap.cca")
+```
+
+Visualizing UMAP results:
+```{r, message=FALSE, fig.width = 12, fig.height=6}
+DimPlot(
+  integ_norm_seurat_obj,
+  reduction = "umap.cca",
+  group.by = c("condition", "cca_clusters")
+)
+```
+
+### Merging Layers
+```{r, message=FALSE}
+integ_norm_seurat_obj <- JoinLayers(integ_norm_seurat_obj)
+```
+
+### Save Processed Seurat Object
+```{r, message=FALSE}
+saveRDS(integ_norm_seurat_obj, "./output/03_norm2integ/obj/integ_norm_seurat_obj.RDS")

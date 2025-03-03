@@ -1,0 +1,446 @@
+---
+title: "Cell-Level DEG Analysis"
+author: "Yoshinori Hayakawa"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 5
+    df_print: "paged"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Cell-Level Differential Expression Gene (DEG) Analysis
+
+## Objective
+This analysis aims to identify differentially expressed genes between conditions within each cell type using preprocessed data. 
+We will employ the differential gene expression analysis functions provided by Seurat to quantitatively explore gene expression differences.
+
+Differential expression genes (DEGs) are identified in each cell type cluster based on the conditions being compared.
+
+### What is Differential Expression Gene (DEG) Analysis?
+DEG analysis is a method used to identify genes that exhibit significant differences in expression between different experimental conditions or biological states (e.g., disease vs. healthy, pre- and post-treatment).
+
+---
+
+## Cell-Level DEG Analysis
+
+### Load Required Libraries
+```{r, message=FALSE}
+# code:5-1
+library(Seurat)
+library(tidyverse)
+library(patchwork)
+source("./tools/viz_tools.R") 
+```
+
+### Load Data
+Load the Seurat object containing cell type annotations.
+```{r, message=FALSE}
+# code:5-2
+annotated_integ_norm_seurat_obj <- readRDS("./output/04_celltype_annotation/obj/annotated_integ_norm_seurat_obj.RDS")
+```
+
+Add a new metadata column named "population" to represent different cell groups.
+```{r, message=FALSE}
+# code:5-3
+annotated_integ_norm_seurat_obj$population <- 
+  paste(annotated_integ_norm_seurat_obj$condition,
+        annotated_integ_norm_seurat_obj$celltype_sctype,
+        sep = "_")
+```
+
+---
+
+### Identifying Differentially Expressed Genes Using `FindMarkers`
+We will identify differentially expressed genes (DEGs) between wild-type and Fezf2 knockout cells in the "Mature neurons" cluster.
+
+Comparison: WT_Mature neurons vs. Fezf2KO_Mature neurons
+
+Set `active.ident` to "population":
+```{r, message=FALSE}
+# code:5-4
+Idents(annotated_integ_norm_seurat_obj) <- "population"
+```
+
+#### Detecting DEGs with [`FindMarkers`](https://satijalab.org/seurat/reference/findmarkers)
+The `FindMarkers` function compares the gene expression levels between two specified groups within the metadata column set as `active.ident`.
+
+Example:
+If the metadata column "celltype" contains three clusters `{A, B, C}` and we want to compare A and B:
+```r
+Idents(seurat_obj) <- "celltype"  
+FindMarkers(object = seurat_obj, ident.1 = "A", ident.2 = "B")  
+```
+
+Run `FindMarkers` to identify differentially expressed genes in "Mature neurons":
+```{r, message=FALSE}
+# code:5-5
+de.markers <- FindMarkers(annotated_integ_norm_seurat_obj,
+                          ident.1 = "WT_Mature neurons", # Comparison group 1
+                          ident.2 = "Fezf2KO_Mature neurons" # Comparison group 2
+                          )
+```
+
+#### Checking `FindMarkers` Results
+Each row in the output represents a gene with its test results:
+
+- **p_val**: P-value from the statistical test
+- **avg_log2FC**: Mean log2 fold change of expression levels
+  - `avg_log2FC = log2(mean expression in ident.1 / mean expression in ident.2)`
+  - `avg_log2FC > 0`: Higher expression in ident.1 (WT)
+  - `avg_log2FC < 0`: Higher expression in ident.2 (Fezf2KO)
+- **pct.1**: Percentage of cells in ident.1 expressing the gene
+- **pct.2**: Percentage of cells in ident.2 expressing the gene
+- **p_val_adj**: Adjusted p-value for multiple testing correction
+
+```{r, message=FALSE}
+# code:5-6
+head(de.markers)
+```
+
+---
+
+##### Visualization of DEG Results with a Volcano Plot
+
+Set thresholds for **adjusted p-value (p_val_adj)** and **log2 fold change (avg_log2FC)**:
+```{r, message=FALSE}
+# code:5-7
+P_THR <- 0.05 # Adjusted p-value threshold
+FC_THR <- 2.0 # log2 Fold Change threshold
+```
+
+Plot Volcano Plot  
+The volcano plot visualizes DEGs:
+- **X-axis**: avg_log2FC
+- **Y-axis**: -log10(adjusted p-value)
+
+```{r, message=FALSE}
+# code:5-8
+volcano_plot(de.markers, P_THR, FC_THR)
+```
+
+##### Extracting Significant DEGs
+Filter genes that pass the significance thresholds:
+```{r, message=FALSE}
+# code:5-9
+de.markers %>%
+  filter(p_val_adj <= P_THR) %>%
+  filter(abs(avg_log2FC) > FC_THR)
+```
+
+
+### Identifying Differentially Expressed Genes Between Wild-type and Fezf2 Mutant Across All Cell Types
+
+#### Detecting DEGs with `FindMarkers`
+Instead of analyzing only a single cell type, this section examines differences between wild-type and Fezf2 mutant across all cell types. The same process is repeated for each cell type.
+
+```{r, message=FALSE}
+# code:5-10
+condition_vec <- unique(annotated_integ_norm_seurat_obj$condition)
+celltype_vec <- unique(annotated_integ_norm_seurat_obj$celltype_sctype)
+
+# Create a list of populations to compare
+compare_list <- lapply(as.data.frame(t(matrix(c(paste(condition_vec[1], celltype_vec, sep="_"), paste(condition_vec[2], celltype_vec, sep="_")), ncol=2))), function(x){x})
+names(compare_list) <- celltype_vec
+compare_list
+```
+
+Set `active.ident` to "population":
+```{r, message=FALSE}
+# code:5-11
+Idents(annotated_integ_norm_seurat_obj) <- "population"
+```
+
+Run `FindMarkers` to detect differentially expressed genes between wild-type and Fezf2 mutant for each cell type.
+```{r, message=FALSE}
+# code:5-12
+# Prepare an empty list to store results
+sc_de_res_list <- list()
+
+# Iterate through all cell types
+for(comp in names(compare_list)){
+  print(comp)
+  print(paste0(compare_list[[comp]][1], " VS ", compare_list[[comp]][2]))
+  
+  min_cell_num <-
+    annotated_integ_norm_seurat_obj[[]] %>%
+    filter(population %in% compare_list[[comp]]) %>%
+    group_by(condition) %>%
+    summarise(cell_number = n(), .groups = "drop") %>%
+    pull(cell_number) %>%
+    min()
+  if(min_cell_num < 3){next} 
+  
+  sc_de_res_list[[comp]] <- 
+    FindMarkers(annotated_integ_norm_seurat_obj,
+                ident.1 = compare_list[[comp]][1],
+                ident.2 = compare_list[[comp]][2]
+                )
+  sc_de_res_list[[comp]]$celltype <- comp
+  sc_de_res_list[[comp]]$gene <- row.names(sc_de_res_list[[comp]])
+}
+```
+
+Combine results for all cell types into a single data frame.
+```{r, message=FALSE}
+# code:5-13
+sc_de_all_res_df <- do.call(bind_rows, sc_de_res_list)
+```
+
+Verify the results:
+```{r, message=FALSE}
+# code:5-14
+head(sc_de_all_res_df)
+```
+
+#### Summarizing and Visualizing Differential Expression Results
+Reshape the results for easier aggregation.
+```{r, message=FALSE}
+# code:5-15
+sc_de_all_res_df_with_flg <-
+  sc_de_all_res_df %>%
+  mutate(test_sig_flg = ifelse(p_val_adj < P_THR, 1, 0)) %>%
+  mutate(test_res_significant = case_when(
+    test_sig_flg == 1 ~ "Significant",
+    test_sig_flg == 0 ~ "NOT_significant",
+    TRUE ~ "test_NA"
+  )) %>%
+  mutate(wt_high_flg = ifelse(avg_log2FC > FC_THR, 1, 0)) %>%    # WT high
+  mutate(ko_high_flg = ifelse(avg_log2FC < -FC_THR, 1, 0)) %>%   # Fezf2KO high
+  mutate(condition_diff = case_when(
+    wt_high_flg == 1 & ko_high_flg == 0 ~ "WT_high",
+    wt_high_flg == 0 & ko_high_flg == 1 ~ "Fezf2KO_high",
+    TRUE ~ "No_difference"
+  ))
+sc_de_all_res_df_with_flg$condition_diff <- factor(sc_de_all_res_df_with_flg$condition_diff, levels = c("WT_high", "Fezf2KO_high", "No_difference"))
+```
+
+Summarize the number of differentially expressed genes for each cell type:
+```{r, message=FALSE}
+# code:5-16
+sc_de_all_res_df_with_flg %>%
+  group_by(celltype, test_res_significant, condition_diff) %>%
+  summarise(gene_number = n(), .groups = "drop")
+```
+
+Visualize the gene count differences using a bar plot:
+```{r, message=FALSE, fig.width = 13, fig.height=6}
+# code:5-17
+sc_de_all_res_df_with_flg %>%
+  group_by(celltype, test_res_significant, condition_diff) %>%
+  summarise(gene_number = n(), .groups = "drop") %>%
+  filter(test_res_significant != "NOT_significant") %>% # Exclude NOT_significant for clarity
+  filter(condition_diff != "No_difference") %>% 
+  ggplot(., aes(x = test_res_significant, y = gene_number, fill = condition_diff)) +
+  geom_col(position = position_dodge2(preserve = "single")) +
+  facet_wrap(. ~ celltype, scales = "free_y") +
+  ggtitle("Comparison of Gene Counts Based on Significance of WT/Fezf2KO Expression Differences (Single-cell level)") +
+  labs(x = "Significance Test Result", y = "Number of Genes", fill = "WT/Fezf2KO")
+```
+
+#### Example: Analyzing Differences in "Microglial Cells"
+Extract differentially expressed genes for microglial cells:
+```{r, message=FALSE}
+# code:5-18
+example_df <- 
+  sc_de_all_res_df %>%
+  filter(celltype == "Microglial cells")
+```
+
+Generate a volcano plot:
+```{r, message=FALSE}
+# code:5-19
+volcano_plot(example_df, P_THR, FC_THR)
+```
+
+Identify genes exceeding threshold criteria:
+```{r, message=FALSE}
+# code:5-20
+example_df %>%
+  filter(p_val_adj <= P_THR) %>%
+  filter(abs(avg_log2FC) > FC_THR)
+```
+
+
+--- 
+
+
+#### Visualizing DEG Expression Differences with Violin Plots
+
+Create a list of DEGs for each cell type.
+```{r, message=FALSE}
+# code:5-21
+sc_deg_positive_fc_list <- list() # positive (WT high)
+sc_deg_negative_fc_list <- list() # negative (Fezf2KO high)
+for(ct in celltype_vec){
+  sc_deg_positive_fc_list[[ct]] <-
+    sc_de_all_res_df %>%
+    filter(p_val_adj < P_THR) %>%
+    filter(avg_log2FC > FC_THR) %>%      # positive (WT high)
+    filter(celltype == ct) %>%
+    pull(gene)
+  
+  sc_deg_negative_fc_list[[ct]] <-
+    sc_de_all_res_df %>%
+    filter(p_val_adj < P_THR) %>%
+    filter(avg_log2FC < -FC_THR) %>%      # negative (Fezf2KO high)
+    filter(celltype == ct) %>%
+    pull(gene)
+}
+```
+
+Visualize DEG expression differences with Violin Plots:
+```{r, message=FALSE}
+# code:5-22
+sc_vln_plot_positive_list <- list()
+sc_vln_plot_negative_list <- list()
+
+for(tmp_celltype in celltype_vec){ # Iterate through cell types
+  # Extract cell-type specific data from the Seurat object
+  tmp_obj_sc <- subset(annotated_integ_norm_seurat_obj, subset = celltype_sctype %in% c(tmp_celltype))
+  
+  # DEGs with avgLog2FC > 0 (positive)
+  if(length(sc_deg_positive_fc_list[[tmp_celltype]]) != 0){
+    sc_vln_plot_positive_list[[tmp_celltype]] <- 
+      VlnPlot(object = tmp_obj_sc,
+              features = sc_deg_positive_fc_list[[tmp_celltype]],
+              group.by = 'celltype_sctype',
+              split.by = 'condition',
+              combine = FALSE)
+  } else {
+    sc_vln_plot_positive_list[[tmp_celltype]] <- NULL
+  }
+  
+  # DEGs with avgLog2FC < 0 (negative)
+  if(length(sc_deg_negative_fc_list[[tmp_celltype]]) != 0){
+    sc_vln_plot_negative_list[[tmp_celltype]] <- 
+      VlnPlot(object = tmp_obj_sc,
+              features = sc_deg_negative_fc_list[[tmp_celltype]],
+              group.by = 'celltype_sctype',
+              split.by = 'condition',
+              combine = FALSE)
+  } else {
+    sc_vln_plot_negative_list[[tmp_celltype]] <- NULL
+  }
+}
+```
+
+##### Example Output of Violin Plots
+Verify the output of Violin Plots. 
+For example, examine the DEG expression differences in "Immature neurons." 
+Since the number of plots may be large, limit the displayed plots for inspection.
+```{r, message=FALSE}
+# Violin plots of genes highly expressed in WT
+# code:5-23
+sc_vln_plot_positive_list[["Immature neurons"]][1:3]
+
+# Violin plots of genes highly expressed in Fezf2KO
+# code:5-24
+sc_vln_plot_negative_list[["Immature neurons"]][1:3]
+```
+
+---
+
+## GO Enrichment Analysis
+
+This analysis identifies characteristic patterns and trends within DEGs and determines how they relate to specific biological processes (BP), molecular functions (MF), and cellular components (CC).
+
+Load the required libraries.
+```{r, message=FALSE}
+# code:5-25
+library(clusterProfiler)
+library(org.Mm.eg.db)
+```
+
+Filter the DEG results based on adjusted p-values and avg_log2FC values.
+```{r, message=FALSE}
+# DEGs highly expressed in WT
+# code:5-26
+fc_positive_pfiltered_sc_de_all_res_df <- 
+  sc_de_all_res_df %>%
+  filter(p_val_adj < P_THR) %>%
+  filter(avg_log2FC > FC_THR)
+
+# DEGs highly expressed in Fezf2KO
+# code:5-27
+fc_negative_pfiltered_sc_de_all_res_df <- 
+  sc_de_all_res_df %>%
+  filter(p_val_adj < P_THR) %>%
+  filter(avg_log2FC < -FC_THR)
+```
+
+### Performing GO Enrichment Analysis Using `clusterProfiler`
+
+Prepare vectors for biological processes (BP), molecular functions (MF), and cellular components (CC).
+```{r, message=FALSE}
+# Vector for different ontology types
+# code:5-28
+GO_type_vec <- c("CC","BP","MF")
+
+# Lists to store GO enrichment analysis results
+positive_go_res_list <- list()
+negative_go_res_list <- list()
+
+# Perform GO enrichment analysis for each ontology type
+for(ont_type in GO_type_vec){
+  print(ont_type)
+  
+  # GO analysis for DEGs highly expressed in WT
+  print("fc positive")
+  positive_go_res_list[[ont_type]] <- 
+    compareCluster(gene~celltype, 
+                   data = fc_positive_pfiltered_sc_de_all_res_df, 
+                   fun ='enrichGO',
+                   OrgDb = org.Mm.eg.db,
+                   keyType = 'SYMBOL',
+                   ont = ont_type,
+                   pAdjustMethod = "BH",
+                   pvalueCutoff  = 0.01,
+                   qvalueCutoff  = 0.05)
+  
+  # GO analysis for DEGs highly expressed in Fezf2KO
+  print("fc negative")
+  negative_go_res_list[[ont_type]] <- 
+    compareCluster(gene~celltype,
+                   data = fc_negative_pfiltered_sc_de_all_res_df,
+                   fun ='enrichGO',
+                   OrgDb = org.Mm.eg.db,
+                   keyType = 'SYMBOL',
+                   ont = ont_type,
+                   pAdjustMethod = "BH",
+                   pvalueCutoff  = 0.01,
+                   qvalueCutoff  = 0.05)
+}
+```
+
+### Visualizing GO Enrichment Results
+Select one of {BP, MF, CC} for visualization.
+
+```
+## X-axis: Cell type (number of genes used for GO analysis)
+## Y-axis: Gene Ontology (GO) terms
+### GeneRatio: Proportion of genes in a GO term relative to total genes used
+### p.adjust: Adjusted p-value
+```
+
+GO enrichment analysis DotPlots for WT DEGs:
+```{r, message=FALSE, fig.width = 25, fig.height=20}
+# code:5-29
+dotplot(positive_go_res_list[["MF"]])
+# code:5-30
+dotplot(positive_go_res_list[["CC"]])
+# code:5-31
+dotplot(positive_go_res_list[["BP"]])
+```
+
+GO enrichment analysis DotPlots for Fezf2KO DEGs:
+```{r, message=FALSE, fig.width = 25, fig.height=20}
+# code:5-32
+dotplot(negative_go_res_list[["MF"]])
+# code:5-34
+dotplot(negative_go_res_list[["CC"]])
+# code:5-35
+dotplot(negative_go_res_list[["BP"]])
