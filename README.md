@@ -51,5 +51,5 @@ This file includes columns specifying age, area, condition, and the path to the 
 | P1  | cortex | WT        | /home/rstudio/data/all/GSM4635080_P1_S1_filtered_gene_bc_matrices_h5.h5 |
 | P1  | cortex | Fezf2KO   | /home/rstudio/data/all/GSM4635087_Fezf2KO_P1_filtered_feature_bc_matrix.h5 |
 
-## Managing Analysis Environments Using Docker
+## Managing analysis environment using Docker
 For this tutorial, we used an [Rstudio server Docker image](https://hub.docker.com/r/hway/rstudio_scrnaseq) that includes necessary libraries for scRNA-seq analysis.
