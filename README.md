@@ -29,7 +29,7 @@ The dataset consists of scRNA-seq data from the cerebral cortex at multiple deve
 
 ### Data Sources
 - [scRNA-seq Data](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE153164) (GEO)
-- [Metadata](https://singlecell.broadinstitute.org/single_cell/study/SCP1290/molecular-logic-of-cellular-diversification-in-the-mammalian-cerebral-cortex)
+- [Metadata](https://singlecell.broadinstitute.org/single_cell/study/SCP1290/molecular-logic-of-cellular-diversification-in-the-mammalian-cerebral-cortex) (1) Go to the page, (2) Sign in (from the upper left button), (3) the Go to page again, (4) Click "Download", (5) Download "metaData_scDevSC.txt"
 
 ## datasheet.tsv
 A TSV file containing metadata for the scRNA-seq data, with relevant columns.
