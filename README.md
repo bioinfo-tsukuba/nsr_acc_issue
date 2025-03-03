@@ -12,7 +12,7 @@ In this tutorial, we use data from the P1 stage of mouse development, comparing 
 
 The analysis consists of the following five steps, each linked to a specific code implementation:
 
-- [01_load](https://htmlpreview.github.io/?https://github.com/bioinfo-tsukuba/nsr_acc_issue/blob/main/analysis/html/01_load.html)
+- [01_load](https://github.com/bioinfo-tsukuba/nsr_acc_issue/blob/main/docs/01_load.html)
   - Load scRNA-seq data in R and prepare it for analysis with Seurat.
 - [02_quality_control](https://htmlpreview.github.io/?https://github.com/bioinfo-tsukuba/nsr_acc_issue/blob/main/analysis/html/02_qaulity_control.html)
   - Perform quality control on scRNA-seq data and remove low-quality cells.
