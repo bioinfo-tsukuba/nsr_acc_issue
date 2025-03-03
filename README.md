@@ -63,7 +63,7 @@ For this tutorial, we used an [Rstudio server Docker image](https://hub.docker.c
 
 - In [04_celltype_annotation](https://bioinfo-tsukuba.github.io/nsr_acc_issue/04_celltype_annotation.html), by utilizing an annotated scRNA-seq dataset as a reference, cell types in the dataset of interest can be determined by mapping it to the reference data.
 - Seurat provides functions (FindTransferAnchors / DataTransfer) specifically designed for cell type annotation using reference datasets. However, this method assumes that the cells in the reference dataset exhibit some degree of similarity to the cells in the dataset of interest. The annotation results depend on the cell types in the reference dataset. Additionally, if the gene names in the reference dataset differ significantly from those in the target dataset, this method cannot be applied. For this demonstration, the reference dataset used is the original annotated dataset from wild-type P1.
-- The code to create the reference file is available from [mouse_p1_annotaion_prep.R](analysis/scripts/mouse_p1_annotaion_prep.R).
+- The code to create the reference file [P1_ref_seurat_obj.RDS](analysis/scripts/mouse_p1_annotaion_prep.R) is available from [mouse_p1_annotaion_prep.R](analysis/scripts/mouse_p1_annotaion_prep.R).
 - The metadata used in `mouse_p1_annotaion_prep.R` can be prepared as follows:
   1. Go to the page on [Single Cell Portal - Broad Institute](https://singlecell.broadinstitute.org/single_cell/study/SCP1290/molecular-logic-of-cellular-diversification-in-the-mammalian-cerebral-cortex)
   2. Sign in (from the upper left button)
