@@ -37,7 +37,7 @@ A TSV file containing metadata for the scRNA-seq data, with relevant columns.
 ### Creating `datasheet.tsv`
 This file includes columns specifying age, area, condition, and the path to the scRNA-seq data.
 
-#### Example `datasheet.tsv`
+#### Example [`datasheet.tsv`](https://github.com/bioinfo-tsukuba/nsr_acc_issue/blob/main/analysis/data_info/datasheet.tsv)
 | age | area  | condition | path |
 |-----|-------|-----------|-----------------------------------------|
 | P1  | cortex | WT        | /home/rstudio/data/all/GSM4635080_P1_S1_filtered_gene_bc_matrices_h5.h5 |
