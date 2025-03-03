@@ -23,6 +23,12 @@ The analysis consists of the following five steps, each linked to a specific cod
   - Perform a comparative analysis between wild-type and Fezf2 mutants to identify genes that are specifically highly expressed in each condition.
 
 # How to run the tutorial on your own
+
+## Get the code
+
+1. Download this repositiory as a .zip file. [Download](https://github.com/bioinfo-tsukuba/nsr_acc_issue/archive/refs/heads/main.zip)
+2. Uncompress `nsr_acc_issue-main.zip` to show the directory `nsr_acc_issue-main`.
+
 ## Preparation of scRNA-seq Data
 ### Overview of the dataset
 The dataset consists of scRNA-seq data from the cerebral cortex at multiple developmental stages in wild-type and Fezf2 mutant mice, obtained from [Di Bella et al. 2021](https://www.nature.com/articles/s41586-021-03670-5).
@@ -31,7 +37,7 @@ The dataset consists of scRNA-seq data from the cerebral cortex at multiple deve
 - [scRNA-seq Data](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE153164) (GEO)
   1. In "Supplementary file" section, click "(http)" to download "GSE153164_RAW.tar".
   2. Uncompress the downloaded "GSE153164_RAW.tar".
-  3. We will use `GSM4635080_P1_S1_filtered_gene_bc_matrices_h5.h5` and `GSM4635087_Fezf2KO_P1_filtered_feature_bc_matrix.h5`.
+  3. Put `GSM4635080_P1_S1_filtered_gene_bc_matrices_h5.h5` and `GSM4635087_Fezf2KO_P1_filtered_feature_bc_matrix.h5` into `nsr_acc_issue-main/data/all`
 - [Metadata](https://singlecell.broadinstitute.org/single_cell/study/SCP1290/molecular-logic-of-cellular-diversification-in-the-mammalian-cerebral-cortex)
   1. Go to the page
   2. Sign in (from the upper left button)
@@ -44,6 +50,7 @@ A TSV file containing metadata for the scRNA-seq data, with relevant columns.
 
 ### Creating `datasheet.tsv`
 This file includes columns specifying age, area, condition, and the path to the scRNA-seq data.
+Then, put it into  `nsr_acc_issue-main/analysis/data_info`
 
 #### Example `datasheet.tsv` [Link](https://github.com/bioinfo-tsukuba/nsr_acc_issue/blob/main/analysis/data_info/datasheet.tsv)
 | age | area  | condition | path |
