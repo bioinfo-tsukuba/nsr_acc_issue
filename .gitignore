@@ -1,9 +1,6 @@
 data/all/*.h5
 data/SCP1290
 
-analysis/ScType
-
-
 jp_analysis/
 # analysis/output
 
