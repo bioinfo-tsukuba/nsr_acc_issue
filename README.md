@@ -54,6 +54,9 @@ Then, put it into  `nsr_acc_issue-main/analysis/data_info`
 | P1  | cortex | WT        | /home/rstudio/data/all/GSM4635080_P1_S1_filtered_gene_bc_matrices_h5.h5 |
 | P1  | cortex | Fezf2KO   | /home/rstudio/data/all/GSM4635087_Fezf2KO_P1_filtered_feature_bc_matrix.h5 |
 
+If you are using the prebuilt [RStudio Server Docker image](https://github.com/bioinfo-tsukuba/nsr_acc_issue/tree/main?tab=readme-ov-file#managing-analysis-environment-using-docker), follow the instructions in the "Data Sources" section to store the data. Then, navigate to the nsr_acc_issue-main directory and execute docker run as described [here](https://github.com/bioinfo-tsukuba/rstudio_scrnaseq/blob/main/README_EN.md#simple-usage-of-scrna-seq-analysis-rstudio-server-docker). This setup eliminates the need to modify the "path" in the "Example datasheet.tsv" file.
+If you are not using the Docker image, you will need to adjust the paths according to your environment.
+
 ## Managing analysis environment using Docker
 For this tutorial, we used an [Rstudio server Docker image](https://hub.docker.com/r/hway/rstudio_scrnaseq) that includes necessary libraries for scRNA-seq analysis.
 Please refer to [here](https://github.com/bioinfo-tsukuba/rstudio_scrnaseq/blob/main/README_EN.md) about how to use the docker image.
