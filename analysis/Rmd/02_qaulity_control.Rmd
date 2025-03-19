@@ -83,8 +83,8 @@ head(ddqc_seurat_obj_list[[1]][[]])
 
 Save the filtered Seurat objects:
 ```{r, message=FALSE}
-saveRDS(ddqc_seurat_obj_list, "./output/02_qc/obj/ddqc_seurat_obj_list.RDS")
-saveRDS(ddqc_df_list, "./output/02_qc/obj/ddqc_df_list.RDS")
+saveRDS(ddqc_seurat_obj_list, "./output/02_quality_control/obj/ddqc_seurat_obj_list.RDS")
+saveRDS(ddqc_df_list, "./output/02_quality_control/obj/ddqc_df_list.RDS")
 ```
 
 #### Doublet Removal using DoubletFinder
@@ -156,7 +156,7 @@ head(doubletfinder_ddqc_seurat_obj_list[[1]][[]])
 ##### Saving Seurat Objects After Doublet Removal
 ```{r, message=FALSE}
 # code:2-10
-saveRDS(doubletfinder_ddqc_seurat_obj_list, "./output/02_qc/obj/doubletfinder_ddqc_seurat_obj_list.RDS")
+saveRDS(doubletfinder_ddqc_seurat_obj_list, "./output/02_quality_control/obj/doubletfinder_ddqc_seurat_obj_list.RDS")
 ```
 
 ### Quality Control Evaluation
@@ -287,6 +287,6 @@ for (snm in names(doubletfinder_ddqc_seurat_obj_list)[2:length(doubletfinder_ddq
 Save the merged Seurat object.
 ```{r, message=FALSE}
 # code:2-20
-saveRDS(merged4norm_seurat_obj, "./output/02_qc/obj/merged4norm_seurat_obj.RDS")
+saveRDS(merged4norm_seurat_obj, "./output/02_quality_control/obj/merged4norm_seurat_obj.RDS")
 ```
 

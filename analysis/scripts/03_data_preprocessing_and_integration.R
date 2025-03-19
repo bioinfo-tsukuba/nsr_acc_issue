@@ -28,7 +28,7 @@ library(ggplot2)
 
 # Load the Seurat object generated in the previous step.
 # code:3-2
-merged4norm_seurat_obj <- readRDS("./output/02_qc/obj/merged4norm_seurat_obj.RDS")
+merged4norm_seurat_obj <- readRDS("./output/02_quality_control/obj/merged4norm_seurat_obj.RDS")
 
 # Seurat Basic Analysis Workflow
 # Seurat V5 enables simultaneous processing of multiple data layers stored in a single Seurat object.
@@ -127,4 +127,4 @@ integ_norm_seurat_obj <- JoinLayers(integ_norm_seurat_obj)
 
 # Save the integrated and clustered Seurat object.
 # code:3-14
-saveRDS(integ_norm_seurat_obj, "./output/03_norm2integ/obj/integ_norm_seurat_obj.RDS")
+saveRDS(integ_norm_seurat_obj, "./output/03_data_preprocessing_and_integration/obj/integ_norm_seurat_obj.RDS")

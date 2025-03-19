@@ -40,9 +40,9 @@ library(ggplot2)
 ```
 
 ### Load Data
-Load the Seurat object created in the `02_qc` step.
+Load the Seurat object created in the `02_quality_control` step.
 ```{r, message=FALSE}
-merged4norm_seurat_obj <- readRDS("./output/02_qc/obj/merged4norm_seurat_obj.RDS")
+merged4norm_seurat_obj <- readRDS("./output/02_quality_control/obj/merged4norm_seurat_obj.RDS")
 ```
 
 ### Seurat Basic Analysis Workflow
@@ -130,4 +130,4 @@ integ_norm_seurat_obj <- JoinLayers(integ_norm_seurat_obj)
 
 ### Save Processed Seurat Object
 ```{r, message=FALSE}
-saveRDS(integ_norm_seurat_obj, "./output/03_norm2integ/obj/integ_norm_seurat_obj.RDS")
+saveRDS(integ_norm_seurat_obj, "./output/03_data_preprocessing_and_integration/obj/integ_norm_seurat_obj.RDS")

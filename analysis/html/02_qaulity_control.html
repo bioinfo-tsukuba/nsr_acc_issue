@@ -1734,8 +1734,8 @@ for(smn in names(created_seurat_obj_list)){
   </script>
 </div>
 <p>Save the filtered Seurat objects:</p>
-<pre class="r"><code>saveRDS(ddqc_seurat_obj_list, &quot;./output/02_qc/obj/ddqc_seurat_obj_list.RDS&quot;)
-saveRDS(ddqc_df_list, &quot;./output/02_qc/obj/ddqc_df_list.RDS&quot;)</code></pre>
+<pre class="r"><code>saveRDS(ddqc_seurat_obj_list, &quot;./output/02_quality_control/obj/ddqc_seurat_obj_list.RDS&quot;)
+saveRDS(ddqc_df_list, &quot;./output/02_quality_control/obj/ddqc_df_list.RDS&quot;)</code></pre>
 </div>
 <div id="doublet-removal-using-doubletfinder" class="section level4">
 <h4>Doublet Removal using DoubletFinder</h4>
@@ -1831,7 +1831,7 @@ head(doubletfinder_ddqc_seurat_obj_list[[1]][[]])</code></pre>
 <div id="saving-seurat-objects-after-doublet-removal" class="section level5">
 <h5>Saving Seurat Objects After Doublet Removal</h5>
 <pre class="r"><code># code:2-10
-saveRDS(doubletfinder_ddqc_seurat_obj_list, &quot;./output/02_qc/obj/doubletfinder_ddqc_seurat_obj_list.RDS&quot;)</code></pre>
+saveRDS(doubletfinder_ddqc_seurat_obj_list, &quot;./output/02_quality_control/obj/doubletfinder_ddqc_seurat_obj_list.RDS&quot;)</code></pre>
 </div>
 </div>
 </div>
@@ -1961,7 +1961,7 @@ for (snm in names(doubletfinder_ddqc_seurat_obj_list)[2:length(doubletfinder_ddq
 }</code></pre>
 <p>Save the merged Seurat object.</p>
 <pre class="r"><code># code:2-20
-saveRDS(merged4norm_seurat_obj, &quot;./output/02_qc/obj/merged4norm_seurat_obj.RDS&quot;)</code></pre>
+saveRDS(merged4norm_seurat_obj, &quot;./output/02_quality_control/obj/merged4norm_seurat_obj.RDS&quot;)</code></pre>
 </div>
 </div>
 

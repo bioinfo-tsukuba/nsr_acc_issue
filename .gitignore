@@ -1,8 +1,27 @@
 data/all/*.h5
 data/SCP1290
 
+analysis/ScType
+
+
 jp_analysis/
-analysis/output
+# analysis/output
+
+analysis/output/01_load/obj/created_seurat_obj_list.RDS
+analysis/output/01_load/obj/orig_mtx_list.RDS
+
+analysis/output/02_quality_control/obj/ddqc_df_list.RDS
+analysis/output/02_quality_control/obj/ddqc_seurat_obj_list.RDS
+analysis/output/02_quality_control/obj/doubletfinder_ddqc_seurat_obj_list.RDS
+analysis/output/02_quality_control/obj/merged4norm_seurat_obj.RDS
+
+analysis/output/03_data_preprocessing_and_integration/obj/integ_norm_seurat_obj.RDS
+
+analysis/output/04_celltype_annotation/obj/annotated_integ_norm_seurat_obj.RDS
+
+.local/
+.config/
+.sh_history
 
 # History files
 .Rhistory

@@ -13,9 +13,9 @@ source("./tools/viz_tools.R")
 
 # Load data
 
-# Load the Seurat object processed in 03_norm2integ
+# Load the Seurat object processed in 03_data_preprocessing_and_integration
 # code:4-2
-integ_norm_seurat_obj <- readRDS("./output/03_norm2integ/obj/integ_norm_seurat_obj.RDS")
+integ_norm_seurat_obj <- readRDS("./output/03_data_preprocessing_and_integration/obj/integ_norm_seurat_obj.RDS")
 
 # code:4-3
 integ_norm_seurat_obj$condition <- factor(integ_norm_seurat_obj$condition, levels = c("WT", "Fezf2KO"))

@@ -59,8 +59,8 @@ head(ddqc_seurat_obj_list[[1]][[]])
 
 # Save Seurat object after ddqc execution
 # code:2-6
-saveRDS(ddqc_seurat_obj_list, "./output/02_qc/obj/ddqc_seurat_obj_list.RDS")
-saveRDS(ddqc_df_list, "./output/02_qc/obj/ddqc_df_list.RDS")
+saveRDS(ddqc_seurat_obj_list, "./output/02_quality_control/obj/ddqc_seurat_obj_list.RDS")
+saveRDS(ddqc_df_list, "./output/02_quality_control/obj/ddqc_df_list.RDS")
 
 # 2. Removal of doublet cells using DoubletFinder
 # Preprocessing required for DoubletFinder
@@ -122,7 +122,7 @@ for (nm in names(ddqc_seurat_obj_list)) {
 
 # Save Seurat objects after doublet removal
 # code:2-10
-saveRDS(doubletfinder_ddqc_seurat_obj_list, "./output/02_qc/obj/doubletfinder_ddqc_seurat_obj_list.RDS")
+saveRDS(doubletfinder_ddqc_seurat_obj_list, "./output/02_quality_control/obj/doubletfinder_ddqc_seurat_obj_list.RDS")
 
 ################################################################################
 
@@ -232,4 +232,4 @@ for (sample_name in names(doubletfinder_ddqc_seurat_obj_list)[2:length(doubletfi
 
 # Save the merged Seurat object
 # code:2-20
-saveRDS(merged4norm_seurat_obj, "./output/02_qc/obj/merged4norm_seurat_obj.RDS")
+saveRDS(merged4norm_seurat_obj, "./output/02_quality_control/obj/merged4norm_seurat_obj.RDS")
